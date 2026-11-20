@@ -99,30 +99,34 @@ SDMX-CSV offers the possibility to set the value for three parameters via the me
 
 ### SDMX-Parquet
 
-[SDMX-Parquet](https://github.com/sdmx-twg/sdmx-parquet) is a data format based on [Apache Parquet](https://parquet.apache.org/), designed for data analytics. A response always contains the **complete data of one dataflow**, in a flat representation (one row per observation) with typed columns and IDs only, as defined in the [SDMX-Parquet Data Message Field Guide](https://github.com/sdmx-twg/sdmx-parquet/blob/develop/data-message/sdmx-parquet-field-guide.md).
+[SDMX-Parquet](https://github.com/sdmx-twg/sdmx-parquet) is a data format based on [Apache Parquet](https://parquet.apache.org/), designed for data analytics: a flat representation (one row per observation) of the data of one dataflow, with typed columns and IDs only, as defined in the [SDMX-Parquet Data Message Field Guide](https://github.com/sdmx-twg/sdmx-parquet/blob/develop/data-message/sdmx-parquet-field-guide.md).
 
 The media type has no parameter other than `version`. `version=1.0` is equivalent to `version=1.0.0`, and unsupported versions return `406 Not Acceptable`, as for other formats.
 
-SDMX-Parquet can therefore only be returned for a query that identifies exactly one dataflow and applies no filter, for example:
+A service that supports SDMX-Parquet must return it for a query that identifies exactly one dataflow and applies no filter, i.e. the complete data of the dataflow, for example:
 
     https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/*
+
+Filtering is optional: a service may also support the filtering parameters below, in which case the file contains only the requested data (and, for `attributes` and `measures`, only the requested components).
 
 Parameter | Supported with SDMX-Parquet
 --- | ---
 context | `dataflow` only
 agencyID, resourceID, version | Must identify exactly one dataflow
-key | All values only (`*`)
-asOf | Yes: the response contains the complete data of the dataflow as it was at the requested point in time, which the file records in the `sdmx.as_of` key of its file-level metadata
-c, updatedAfter, firstNObservations, lastNObservations, dimensionAtObservation, attributes, measures, includeHistory, offset, limit, sort, reportingYearStartDay | No
+key | All values (`*`) must be supported; other keys may be supported
+c | May be supported
+attributes, measures | May be supported: the file then contains only the requested components
+asOf | Yes: the response contains the data of the dataflow as it was at the requested point in time, which the file records in the `sdmx.as_of` key of its file-level metadata
+updatedAfter, firstNObservations, lastNObservations, dimensionAtObservation, includeHistory, offset, limit, sort, reportingYearStartDay | No
 Media type parameters other than `version` | No
 `Accept-Language` header | Ignored: SDMX-Parquet files contain IDs only
 
-When a request for SDMX-Parquet contains key filtering or an unsupported parameter:
+When a request for SDMX-Parquet contains a parameter or a filter that the service does not support with SDMX-Parquet:
 
 - if the `Accept` header also lists other acceptable media types (e.g. `application/vnd.sdmx.data+parquet;version=1.0.0, application/vnd.sdmx.data+csv;version=2.1.0;q=0.5`), the service should answer with the most preferred of them that can represent the result, following [HTTP content negotiation](content_negotiation.md);
 - otherwise, the service must return `406 Not Acceptable`, and the error message should name the unsupported parameter(s).
 
-When the dataflow has no data, the service returns `204 No Content`, without a Parquet file. Error responses never contain a Parquet file.
+When the query matches no data, the service returns `204 No Content`, without a Parquet file. Error responses never contain a Parquet file.
 
 Compression is applied inside the Parquet file (column-chunk compression), not negotiated over HTTP. ZSTD is the recommended default codec, and Snappy is acceptable for compatibility with older readers. The `Accept-Encoding` header is not used to select the Parquet compression codec, and services should not apply an additional `Content-Encoding` by default, as the payload is already compressed.
 
@@ -364,8 +368,12 @@ By default, the REST API interprets the timestamps used by `includeHistory` and 
 
         https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/*
 
-- Retrieve the complete data of a dataflow as SDMX-Parquet, as it was at a certain point in time:
+- Retrieve the data of a dataflow as SDMX-Parquet, as it was at a certain point in time:
 
         https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/*?asOf=2026-10-01T00:00:00Z
 
-  If SDMX-Parquet is the only acceptable media type, a filtered query such as `https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/M.USD.EUR.SP00.A` returns `406 Not Acceptable`.
+- Retrieve only some series of a dataflow as SDMX-Parquet, from a service that supports filtering with SDMX-Parquet:
+
+        https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/M.USD.EUR.SP00.A
+
+  If the service does not support filtering with SDMX-Parquet and SDMX-Parquet is the only acceptable media type, it returns `406 Not Acceptable`.
