@@ -99,25 +99,23 @@ SDMX-CSV offers the possibility to set the value for three parameters via the me
 
 ### SDMX-Parquet
 
-[SDMX-Parquet](https://github.com/sdmx-twg/sdmx-parquet) is a data format based on [Apache Parquet](https://parquet.apache.org/), designed for data analytics: a flat representation (one row per observation) of the data of one dataflow, with typed columns and IDs only, as defined in the [SDMX-Parquet Data Message Field Guide](https://github.com/sdmx-twg/sdmx-parquet/blob/develop/data-message/sdmx-parquet-field-guide.md).
+[SDMX-Parquet](https://github.com/sdmx-twg/sdmx-parquet) is a data format based on [Apache Parquet](https://parquet.apache.org/), designed for data analytics: a flat representation (one row per observation) of the data of one dataflow, provision agreement or data structure, with typed columns and IDs only, as defined in the [SDMX-Parquet Data Message Field Guide](https://github.com/sdmx-twg/sdmx-parquet/blob/develop/data-message/sdmx-parquet-field-guide.md).
 
 The media type has no parameter other than `version`. `version=1.0` is equivalent to `version=1.0.0`, and unsupported versions return `406 Not Acceptable`, as for other formats.
 
-A service that supports SDMX-Parquet must return it for a query that identifies exactly one dataflow and applies no filter, i.e. the complete data of the dataflow, for example:
+A service that supports SDMX-Parquet must return it for a query that identifies exactly one data structure, dataflow or provision agreement and applies no filter, i.e. the complete data of that structure, for example:
 
     https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/*
 
-Filtering is optional: a service may also support the filtering parameters below, in which case the file contains only the requested data (and, for `attributes` and `measures`, only the requested components).
+Beyond this, each service decides which other parameters of data queries it supports with SDMX-Parquet, including filtering. When it supports them, the file contains only the requested data (and, for `attributes` and `measures`, only the requested components).
 
 Parameter | Supported with SDMX-Parquet
 --- | ---
-context | `dataflow` only
-agencyID, resourceID, version | Must identify exactly one dataflow
+context | `datastructure`, `dataflow` or `provisionagreement`
+agencyID, resourceID, version | Must identify exactly one data structure, dataflow or provision agreement
 key | All values (`*`) must be supported; other keys may be supported
-c | May be supported
-attributes, measures | May be supported: the file then contains only the requested components
-asOf | Yes: the response contains the data of the dataflow as it was at the requested point in time, which the file records in the `sdmx.as_of` key of its file-level metadata
-updatedAfter, firstNObservations, lastNObservations, dimensionAtObservation, includeHistory, offset, limit, sort, reportingYearStartDay | No
+asOf | Yes: the response contains the data as they were at the requested point in time, which the file records in the `sdmx.as_of` key of its file-level metadata
+Other parameters (e.g. c, attributes, measures, updatedAfter, firstNObservations, lastNObservations, includeHistory, offset, limit, sort) | May be supported, at the choice of the service
 Media type parameters other than `version` | No
 `Accept-Language` header | Ignored: SDMX-Parquet files contain IDs only
 
@@ -130,7 +128,7 @@ When the query matches no data, the service returns `204 No Content`, without a 
 
 Compression is applied inside the Parquet file (column-chunk compression), not negotiated over HTTP. ZSTD is the recommended default codec, and Snappy is acceptable for compatibility with older readers. The `Accept-Encoding` header is not used to select the Parquet compression codec, and services should not apply an additional `Content-Encoding` by default, as the payload is already compressed.
 
-Services should send the `Content-Disposition` header with the `attachment` type and a file name built from the dataflow identification, for example `Content-Disposition: attachment; filename="ECB_EXR_1.0.0.parquet"`.
+Services should send the `Content-Disposition` header with the `attachment` type and a file name built from the identification of the structure, for example `Content-Disposition: attachment; filename="ECB_EXR_1.0.0.parquet"`.
 
 ## Use cases behind the various time-related queries
 
@@ -372,7 +370,7 @@ By default, the REST API interprets the timestamps used by `includeHistory` and 
 
         https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/*?asOf=2026-10-01T00:00:00Z
 
-- Retrieve only some series of a dataflow as SDMX-Parquet, from a service that supports filtering with SDMX-Parquet:
+- Retrieve only some series of a dataflow as SDMX-Parquet, from a service that chose to support filtering with SDMX-Parquet:
 
         https://ws-entry-point/data/dataflow/ECB/EXR/1.0.0/M.USD.EUR.SP00.A
 
