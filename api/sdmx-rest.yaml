@@ -997,10 +997,10 @@ components:
     "200-reg":
       description: OK
       content:
-        application/vnd.sdmx.registry+xml;version=3.1.0:
+        application/vnd.sdmx.registry+json;version=2.2.0:
           schema:
             type: string
-        application/vnd.sdmx.registry+json;version=2.2.0:
+        application/vnd.sdmx.registry+xml;version=3.1.0:
           schema:
             type: string
         application/vnd.sdmx.registry+xml;version=3.0.0:
